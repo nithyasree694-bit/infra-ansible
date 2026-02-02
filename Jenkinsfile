@@ -80,7 +80,7 @@ ls -lh "${ARTIFACT}"
           dir(env.TERRAFORM_DIR) {
             sh '''#!/usr/bin/env bash
 set -euo pipefail
-test -n "$(ls -1 *.tf 2>/dev/null || true)" || { echo "No .tf files in $(pwd)"; exit 1; }
+rm -rf .terraform || { echo "No .tf files in $(pwd)"; exit 1; }
 
 terraform fmt -recursive
 terraform init -input=false
