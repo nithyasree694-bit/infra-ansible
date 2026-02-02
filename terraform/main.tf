@@ -39,7 +39,7 @@ variable "environment" {
 
 variable "project_name" {
   type    = string
-  default = "devops-webapp"
+  default = "pipe"
 }
 
 variable "vpc_id" {
