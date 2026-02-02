@@ -44,7 +44,7 @@ variable "project_name" {
 
 variable "vpc_id" {
   type        = string
-  description = "vpc-0eff6848d8ed2be0b."
+  description = "ID of the VPC to deploy into (e.g., vpc-xxxxxxxx)."
 }
 
 variable "subnet_id" {
@@ -126,7 +126,7 @@ data "aws_subnets" "in_vpc" {
 
 data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["099720109477"]
+  owners      = ["099720109477"] # Canonical
 
   filter {
     name   = "name"
@@ -148,8 +148,9 @@ data "aws_ami" "ubuntu" {
 # Derived Selections
 ########################################
 locals {
-  selected_subnet_id = var.subnet_id != "" ? var.subnet_id :
-    (length(data.aws_subnets.in_vpc.ids) > 0 ? data.aws_subnets.in_vpc.ids[0] : "")
+  selected_subnet_id = var.subnet_id != "" ? var.subnet_id : (
+    length(data.aws_subnets.in_vpc.ids) > 0 ? data.aws_subnets.in_vpc.ids[0] : ""
+  )
 }
 
 ########################################
@@ -191,6 +192,24 @@ resource "aws_security_group" "web" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["3.110.85.249/32"]
+    cidr_blocks = ["15.207.89.170/32"] # change to your Jenkins agent public IP if needed
   }
 
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
