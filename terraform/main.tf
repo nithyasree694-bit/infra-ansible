@@ -27,9 +27,20 @@ provider "aws" {
 ########################################
 # Variables
 ########################################
-variable "aws_region"            { type = string, default = "ap-south-1" }
-variable "environment"           { type = string, default = "production" }
-variable "project_name"          { type = string, default = "pipe" }
+variable "aws_region" {
+  type    = string
+  default = "ap-south-1"
+}
+
+variable "environment" {
+  type    = string
+  default = "production"
+}
+
+variable "project_name" {
+  type    = string
+  default = "pipe"
+}
 
 variable "vpc_id" {
   type        = string
@@ -42,18 +53,51 @@ variable "subnet_id" {
   default     = ""
 }
 
-variable "reuse_existing_sg" { type = bool, default = false }
-variable "existing_sg_name"  { type = string, default = "web-firewall" }
+variable "reuse_existing_sg" {
+  type    = bool
+  default = false
+}
+
+variable "existing_sg_name" {
+  type    = string
+  default = "web-firewall"
+}
 
 # Key pair management
-variable "keypair_name"       { type = string, default = "25-hp-mumbai" }
-variable "create_key_pair"    { type = bool,   default = true }
-variable "public_key_openssh" { type = string, default = "" }
+variable "keypair_name" {
+  type    = string
+  default = "25-hp-mumbai"
+}
 
-variable "ansible_user"            { type = string, default = "ubuntu" }
-variable "apache_instance_count"   { type = number, default = 2 }
-variable "nginx_instance_count"    { type = number, default = 2 }
-variable "instance_type"           { type = string, default = "t3.micro" }
+variable "create_key_pair" {
+  type    = bool
+  default = true
+}
+
+variable "public_key_openssh" {
+  type    = string
+  default = ""
+}
+
+variable "ansible_user" {
+  type    = string
+  default = "ubuntu"
+}
+
+variable "apache_instance_count" {
+  type    = number
+  default = 2
+}
+
+variable "nginx_instance_count" {
+  type    = number
+  default = 2
+}
+
+variable "instance_type" {
+  type    = string
+  default = "t3.micro"
+}
 
 ########################################
 # Locals
@@ -84,9 +128,20 @@ data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
 
-  filter { name = "name",                values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"] }
-  filter { name = "virtualization-type", values = ["hvm"] }
-  filter { name = "root-device-type",    values = ["ebs"] }
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
 }
 
 ########################################
@@ -167,7 +222,9 @@ resource "aws_security_group" "web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(local.common_tags, { Name = "${var.project_name}-web-sg-${var.environment}" })
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-web-sg-${var.environment}"
+  })
 }
 
 locals {
@@ -213,19 +270,49 @@ resource "aws_instance" "nginx" {
 ########################################
 # Outputs
 ########################################
-output "subnet_id_used"        { value = local.selected_subnet_id, description = "Subnet used for EC2" }
-output "security_group_id"     { value = local.web_sg_id,          description = "Security Group ID" }
-output "apache_public_ips"     { value = [for i in aws_instance.apache : i.public_ip], description = "Apache public IPs" }
-output "nginx_public_ips"      { value = [for i in aws_instance.nginx  : i.public_ip], description = "Nginx public IPs" }
-output "key_name_used"         { value = local.selected_key_name,   description = "Key pair used" }
+output "subnet_id_used" {
+  description = "Subnet used for EC2"
+  value       = local.selected_subnet_id
+}
+
+output "security_group_id" {
+  description = "Security Group ID"
+  value       = local.web_sg_id
+}
+
+output "apache_public_ips" {
+  description = "Apache public IPs"
+  value       = [for i in aws_instance.apache : i.public_ip]
+}
+
+output "nginx_public_ips" {
+  description = "Nginx public IPs"
+  value       = [for i in aws_instance.nginx : i.public_ip]
+}
+
+output "key_name_used" {
+  description = "Key pair used"
+  value       = local.selected_key_name
+}
+
 output "generated_private_key_path" {
-  value       = var.create_key_pair && var.public_key_openssh == "" ? local_file.generated_pem[0].filename : ""
   description = "Generated PEM path (if any)"
+  value       = var.create_key_pair && var.public_key_openssh == "" ? local_file.generated_pem[0].filename : ""
   sensitive   = false
 }
-output "ansible_user"          { value = var.ansible_user,          description = "Default Ansible SSH user" }
 
-# Helpful HTTP URLs (used by your Jenkins post step)
-output "apache_http_urls"      { value = [for ip in aws_instance.apache : "http://${ip}"], description = "Apache HTTP URLs" }
-output "nginx_http_urls"       { value = [for ip in aws_instance.nginx  : "http://${ip}"], description = "Nginx HTTP URLs" }
-``
+output "ansible_user" {
+  description = "Default Ansible SSH user"
+  value       = var.ansible_user
+}
+
+# Helpful HTTP URLs for Jenkins
+output "apache_http_urls" {
+  description = "Apache HTTP URLs"
+  value       = [for ip in aws_instance.apache : "http://${ip}"]
+}
+
+output "nginx_http_urls" {
+  description = "Nginx HTTP URLs"
+  value       = [for ip in aws_instance.nginx : "http://${ip}"]
+}
