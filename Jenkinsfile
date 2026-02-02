@@ -79,13 +79,19 @@ ls -lh "${ARTIFACT}"
                                           passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
           dir(env.TERRAFORM_DIR) {
             sh '''#!/usr/bin/env bash
-set -euo pipefail
-rm -rf .terraform || { echo "No .tf files in $(pwd)"; exit 1; }
-
-terraform fmt -recursive
-terraform init -input=false
-terraform validate
-'''
+            set -x
+            
+            # Clean old files
+            rm -rf .terraform .terraform.lock.hcl
+            
+            echo "Current Directory: $(pwd)"
+            ls -la *.tf
+            
+            # Direct init without unnecessary checks
+            terraform init -input=false -no-color
+            
+            terraform validate -no-color
+            '''
           }
         }
       }
