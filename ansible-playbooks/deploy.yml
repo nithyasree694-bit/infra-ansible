@@ -1,0 +1,52 @@
+- name: Deploy to Apache instances
+  hosts: apache
+  become: true
+  vars:
+    apache_root: /var/www/html
+    app_repo_url: "https://github.com/nithyasree694-bit/Webapp.git"
+    app_branch: "main"
+  tasks:
+    - name: Install Apache and Git
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: true
+      loop:
+        - apache2
+        - git
+
+    - name: Ensure Apache root exists
+      ansible.builtin.file:
+        path: "{{ apache_root }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+
+    - name: Clean Apache root
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      with_fileglob:
+        - "{{ apache_root }}/*"
+
+    - name: Clone application repo into Apache root
+      ansible.builtin.git:
+        repo: "{{ app_repo_url }}"
+        dest: "{{ apache_root }}"
+        version: "{{ app_branch }}"
+        force: true
+
+    - name: Set permissions for Apache root
+      ansible.builtin.file:
+        path: "{{ apache_root }}"
+        owner: www-data
+        group: www-data
+        mode: "0755"
+        recurse: true
+
+    - name: Enable & restart Apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+        enabled: true
