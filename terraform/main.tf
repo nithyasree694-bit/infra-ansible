@@ -27,20 +27,9 @@ provider "aws" {
 ########################################
 # Variables
 ########################################
-variable "aws_region" {
-  type    = string
-  default = "ap-south-1"
-}
-
-variable "environment" {
-  type    = string
-  default = "production"
-}
-
-variable "project_name" {
-  type    = string
-  default = "pipe"
-}
+variable "aws_region"            { type = string, default = "ap-south-1" }
+variable "environment"           { type = string, default = "production" }
+variable "project_name"          { type = string, default = "pipe" }
 
 variable "vpc_id" {
   type        = string
@@ -53,51 +42,18 @@ variable "subnet_id" {
   default     = ""
 }
 
-variable "reuse_existing_sg" {
-  type    = bool
-  default = false
-}
-
-variable "existing_sg_name" {
-  type    = string
-  default = "web-firewall"
-}
+variable "reuse_existing_sg" { type = bool, default = false }
+variable "existing_sg_name"  { type = string, default = "web-firewall" }
 
 # Key pair management
-variable "keypair_name" {
-  type    = string
-  default = "25-hp-mumbai"
-}
+variable "keypair_name"       { type = string, default = "25-hp-mumbai" }
+variable "create_key_pair"    { type = bool,   default = true }
+variable "public_key_openssh" { type = string, default = "" }
 
-variable "create_key_pair" {
-  type    = bool
-  default = true
-}
-
-variable "public_key_openssh" {
-  type    = string
-  default = ""
-}
-
-variable "ansible_user" {
-  type    = string
-  default = "ubuntu"
-}
-
-variable "apache_instance_count" {
-  type    = number
-  default = 2
-}
-
-variable "nginx_instance_count" {
-  type    = number
-  default = 2
-}
-
-variable "instance_type" {
-  type    = string
-  default = "t3.micro"
-}
+variable "ansible_user"            { type = string, default = "ubuntu" }
+variable "apache_instance_count"   { type = number, default = 2 }
+variable "nginx_instance_count"    { type = number, default = 2 }
+variable "instance_type"           { type = string, default = "t3.micro" }
 
 ########################################
 # Locals
@@ -128,20 +84,9 @@ data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
 
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  filter {
-    name   = "root-device-type"
-    values = ["ebs"]
-  }
+  filter { name = "name",                values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"] }
+  filter { name = "virtualization-type", values = ["hvm"] }
+  filter { name = "root-device-type",    values = ["ebs"] }
 }
 
 ########################################
@@ -187,14 +132,16 @@ resource "aws_security_group" "web" {
   description = "Web security group"
   vpc_id      = data.aws_vpc.selected.id
 
+  # SSH only from your Jenkins agent public IP
   ingress {
     description = "SSH from Jenkins"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["15.207.89.170/32"] # change to your Jenkins agent public IP if needed
+    cidr_blocks = ["15.207.89.170/32"]
   }
 
+  # HTTP from anywhere
   ingress {
     description = "HTTP"
     from_port   = 80
@@ -203,6 +150,7 @@ resource "aws_security_group" "web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # HTTPS from anywhere
   ingress {
     description = "HTTPS"
     from_port   = 443
@@ -211,5 +159,73 @@ resource "aws_security_group" "web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # All egress
   egress {
     from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.common_tags, { Name = "${var.project_name}-web-sg-${var.environment}" })
+}
+
+locals {
+  web_sg_id = aws_security_group.web.id
+}
+
+########################################
+# EC2 Instances - Apache
+########################################
+resource "aws_instance" "apache" {
+  count                       = var.apache_instance_count
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = var.instance_type
+  subnet_id                   = local.selected_subnet_id
+  vpc_security_group_ids      = [local.web_sg_id]
+  key_name                    = local.selected_key_name
+  associate_public_ip_address = true
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-apache-${count.index + 1}-${var.environment}"
+    Role = "apache"
+  })
+}
+
+########################################
+# EC2 Instances - Nginx
+########################################
+resource "aws_instance" "nginx" {
+  count                       = var.nginx_instance_count
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = var.instance_type
+  subnet_id                   = local.selected_subnet_id
+  vpc_security_group_ids      = [local.web_sg_id]
+  key_name                    = local.selected_key_name
+  associate_public_ip_address = true
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-nginx-${count.index + 1}-${var.environment}"
+    Role = "nginx"
+  })
+}
+
+########################################
+# Outputs
+########################################
+output "subnet_id_used"        { value = local.selected_subnet_id, description = "Subnet used for EC2" }
+output "security_group_id"     { value = local.web_sg_id,          description = "Security Group ID" }
+output "apache_public_ips"     { value = [for i in aws_instance.apache : i.public_ip], description = "Apache public IPs" }
+output "nginx_public_ips"      { value = [for i in aws_instance.nginx  : i.public_ip], description = "Nginx public IPs" }
+output "key_name_used"         { value = local.selected_key_name,   description = "Key pair used" }
+output "generated_private_key_path" {
+  value       = var.create_key_pair && var.public_key_openssh == "" ? local_file.generated_pem[0].filename : ""
+  description = "Generated PEM path (if any)"
+  sensitive   = false
+}
+output "ansible_user"          { value = var.ansible_user,          description = "Default Ansible SSH user" }
+
+# Helpful HTTP URLs (used by your Jenkins post step)
+output "apache_http_urls"      { value = [for ip in aws_instance.apache : "http://${ip}"], description = "Apache HTTP URLs" }
+output "nginx_http_urls"       { value = [for ip in aws_instance.nginx  : "http://${ip}"], description = "Nginx HTTP URLs" }
+``
