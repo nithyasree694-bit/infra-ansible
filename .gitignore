@@ -1,0 +1,10 @@
+
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+.terrahistory
+*.retry
+ansible-playbooks/inventory/hosts.ini
