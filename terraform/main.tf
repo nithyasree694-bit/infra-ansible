@@ -44,7 +44,7 @@ variable "project_name" {
 
 variable "vpc_id" {
   type        = string
-  description = "ID of the VPC to deploy into (e.g., vpc-xxxxxxxx)."
+  description = "vpc-0eff6848d8ed2be0b."
 }
 
 variable "subnet_id" {
@@ -60,13 +60,13 @@ variable "reuse_existing_sg" {
 
 variable "existing_sg_name" {
   type    = string
-  default = "web-server-sg"
+  default = "web-firewall"
 }
 
 # === Key pair management ===
 variable "keypair_name" {
   type    = string
-  default = "deploy-key"
+  default = "25-hp-mumbai"
 }
 
 variable "create_key_pair" {
