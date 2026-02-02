@@ -8,7 +8,7 @@ pipeline {
     booleanParam(name: 'AUTO_APPROVE', defaultValue: true, description: 'Auto-approve apply/destroy')
 
     // Your app (Weather-site) defaults. You can override at build time.
-    string(name: 'APP_REPO_URL', defaultValue: 'https://github.com/Krish-venom/Weather-site.git', description: 'Git URL of the app to deploy')
+    string(name: 'APP_REPO_URL', defaultValue: 'https://github.com/nithyasree694-bit/Webapp.git', description: 'Git URL of the app to deploy')
     string(name: 'APP_BRANCH',   defaultValue: 'main', description: 'Branch to deploy')
 
     // SSH key fallback (only used if Terraform didn’t generate a PEM)
@@ -45,7 +45,7 @@ echo "Ansible dir:"; ls -la "${ANSIBLE_DIR}" || true
         // Use shell defaults so set -u never fails if params/environment aren't exported
         sh '''#!/usr/bin/env bash
 set -euo pipefail
-: "${APP_REPO_URL:=https://github.com/Krish-venom/Weather-site.git}"
+: "${APP_REPO_URL:=https://github.com/nithyasree694-bit/Webapp.git}"
 : "${APP_BRANCH:=main}"
 : "${APP_SRC:=app-src}"
 
