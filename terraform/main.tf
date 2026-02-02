@@ -1,3 +1,4 @@
+cat > main.tf <<'HCL'
 ########################################
 # Terraform & Provider Configuration
 ########################################
@@ -316,3 +317,4 @@ output "nginx_http_urls" {
   description = "Nginx HTTP URLs"
   value       = [for ip in aws_instance.nginx : "http://${ip}"]
 }
+HCL
